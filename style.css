@@ -1239,14 +1239,53 @@ body.nav-open { overflow: hidden; }
   background: var(--footer-bg);
   color: var(--text);
   border-top: 1px solid rgb(var(--fg-rgb) / .07);
-  text-align: center;
-  padding: 44px var(--gutter) 38px;
+
+  /* A single thin bar, not a block: copyright left, socials right,
+     one row of type deciding the height. Height comes only from the
+     padding, so the whole band sits well under the 84px header. */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  /* Deeper bottom than top on purpose: the browser paints its link-URL
+     bubble in a ~22px strip along the bottom of the window, and flips it
+     to the right the moment the cursor enters that strip. Lifting the
+     icon row clear of it keeps the URL preview anchored bottom-left. */
+  padding: 18px var(--gutter) 34px;
 }
-.footer .logo { font-size: 26px; display: inline-block; }
-.footer p { color: var(--muted); font-size: 14px; margin-top: 14px; }
-.footer .social a { border-color: rgb(var(--fg-rgb) / .16); color: var(--text); }
-.footer .social a:hover { color: var(--on-accent); }
-.footer .social { justify-content: center; margin-top: 26px; }
+.footer-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.footer .logo { font-size: 14px; letter-spacing: 1.4px; }
+
+/* Bare icons rather than the contact section's 46px glass circles —
+   at this height a button row would be taller than the bar itself. */
+/* Pulled back by half the icon box's empty edge so the first glyph
+   optically lines up with the gutter, the way the copy does. */
+.footer .social { margin: 0 0 0 -7px; gap: 6px; }
+.footer .social a {
+  width: 30px; height: 30px;
+  font-size: 16px;
+  border: none;
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 8px;
+  color: var(--muted);
+}
+.footer .social a:hover { background: none; color: var(--main-ink); }
+
+@media (max-width: 560px) {
+  .footer { justify-content: center; text-align: center; padding: 16px var(--gutter) 30px; }
+  .footer .social { margin-left: 0; }  /* centred here, so drop the optical pull */
+  .footer-copy { font-size: 12.5px; }
+}
 
 #topBtn {
   position: fixed;
