@@ -1,5 +1,0 @@
-# Editor / OS cruft — kept out of the repo and out of the Pages artifact,
-# since the deploy workflow uploads the whole directory.
-.vscode/
-.DS_Store
-Thumbs.db

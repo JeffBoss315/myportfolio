@@ -677,6 +677,31 @@ body.nav-open { overflow: hidden; }
   color: var(--on-accent);
 }
 
+/* ---------- brand marks ----------
+   The one deliberate exception to the single-accent rule above: a social
+   mark is recognised by its colour before its shape, so each link carries
+   its own --brand-rgb and wears it at rest. Hover tints the glass with the
+   same triplet instead of the accent, so the brand stays the subject.
+
+   Both rows sit on a dark ground in EITHER theme (the hero is always dark,
+   --footer-bg is dark in both), so one set of values covers both. The
+   values are the official brand colours, except GitHub and LinkedIn: both
+   are too dark to read here, so each takes the lighter variant its own
+   product uses on a dark surface. The mail link carries no data-brand on
+   purpose: it is the site's own action, so it keeps the accent. */
+.social a[data-brand="github"]   { --brand-rgb: 240 246 252; }
+.social a[data-brand="linkedin"] { --brand-rgb: 112 181 249; }
+.social a[data-brand="youtube"]  { --brand-rgb: 255 0 0; }
+.social a[data-brand="tiktok"]   { --brand-rgb: 254 44 85; }
+.social a[data-brand="facebook"] { --brand-rgb: 24 119 242; }
+
+.social a[data-brand] { color: rgb(var(--brand-rgb)); }
+.social a[data-brand]:hover {
+  background: rgb(var(--brand-rgb) / .18);
+  border-color: rgb(var(--brand-rgb) / .6);
+  color: rgb(var(--brand-rgb));
+}
+
 /* Jeff's local time — a small reminder there is a person here. */
 .hero-local {
   display: inline-flex;
@@ -1280,6 +1305,8 @@ body.nav-open { overflow: hidden; }
   color: var(--muted);
 }
 .footer .social a:hover { background: none; color: var(--main-ink); }
+.footer .social a[data-brand] { color: rgb(var(--brand-rgb) / .78); }
+.footer .social a[data-brand]:hover { background: none; color: rgb(var(--brand-rgb)); }
 
 @media (max-width: 560px) {
   .footer { justify-content: center; text-align: center; padding: 16px var(--gutter) 30px; }
