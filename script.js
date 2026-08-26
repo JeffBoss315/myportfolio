@@ -125,6 +125,21 @@
      ========================================================== */
   var PROJECTS = [
     {
+      id: 'movixa',
+      title: 'MOVIXA — Movie Discovery Hub',
+      tag: 'web',
+      emoji: '🎬',
+      image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=70',
+      imageAlt: 'Cinema seats facing a lit screen',
+      blurb: 'Film discovery app with trending and top-rated rails, trailer playback, cast and crew pages, a saved watchlist and free public-domain features streamed from the Internet Archive.',
+      stack: ['JavaScript', 'TMDB API', 'Internet Archive', 'CSS'],
+      problem: 'Deciding what to watch means bouncing between listing sites, trailer searches and whichever service actually carries the film.',
+      role: 'Sole developer — API layer, UI, and the watchlist and playback logic.',
+      outcome: 'One page covers browsing, search, trailers, watch-provider links and a persisted watchlist, with public-domain titles playable in place.',
+      demo: 'https://jeffboss315.github.io/moviehub/',
+      repo: 'https://github.com/JeffBoss315/moviehub'
+    },
+    {
       id: 'hospital',
       title: 'Hospital Management System',
       tag: 'software',
@@ -643,7 +658,7 @@
         '</article>';
     }).join('') + '<p class="empty-state" hidden>No projects match that search.</p>';
 
-    var cards = $('.project', grid);
+    var cards = $$('.project', grid);
     var empty = $('.empty-state', grid);
     var activeFilter = 'all';
     /* The first pass runs before initReveal observes the cards, so it
@@ -1212,7 +1227,9 @@
       return function () {
         var el = document.querySelector(hash);
         if (el) el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
-        history.replaceState(null, '', hash);
+        /* Chrome refuses replaceState on a file:// document (origin
+           'null'), so the scroll must not depend on the URL update. */
+        try { history.replaceState(null, '', hash); } catch (e) {}
       };
     }
 
