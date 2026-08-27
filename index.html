@@ -25,7 +25,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+  <!-- The hero photo is the largest thing painted and it is cross-origin,
+       so the connection alone is not enough — start the fetch during head
+       parsing rather than when the <img> is reached. -->
+  <link rel="preload" as="image" fetchpriority="high"
+        href="https://images.unsplash.com/photo-1610817118922-a7374b775fd9?auto=format&amp;fit=crop&amp;w=1920&amp;q=72">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
 
   <link rel="stylesheet" href="style.css">
 
@@ -214,7 +220,7 @@
 
   <!-- Preloader -->
   <div class="preloader" id="preloader" aria-hidden="true">
-    <div class="preloader-mark">GEOFREY<span>JEFF</span></div>
+    <div class="preloader-mark">GEOFFREY<span>JEFF</span></div>
     <div class="preloader-bar"><span></span></div>
   </div>
 
@@ -345,7 +351,7 @@
 
         <!-- Figures are counted from the page's own data at load, so they
              cannot drift out of date or be quietly rounded up. -->
-        <div class="hero-stats" id="hero-stats" aria-label="At a glance"></div>
+        <div class="hero-stats" id="hero-stats" role="list" aria-label="At a glance"></div>
 
         <p class="hero-local">
           <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>

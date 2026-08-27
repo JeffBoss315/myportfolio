@@ -352,19 +352,34 @@
     var backdrop = $('.nav-backdrop');
     if (!toggle || !nav) return;
 
+    /* Below the breakpoint the drawer is a panel parked off-screen with
+       a transform. A transform hides nothing from the keyboard or from
+       a screen reader, so while it is closed its seven links were still
+       in the tab order, sitting between the logo and the page. `inert`
+       is what actually takes them out — and it has to come off again
+       above the breakpoint, where the same element is the desktop
+       navigation bar. */
+    var mobile = window.matchMedia('(max-width: 860px)');
+    var isOpen = function () { return document.body.classList.contains('nav-open'); };
+
+    function syncInert() {
+      var drawer = mobile.matches;
+      if (drawer && !isOpen()) nav.setAttribute('inert', '');
+      else nav.removeAttribute('inert');
+    }
+
     function setOpen(open) {
       document.body.classList.toggle('nav-open', open);
       toggle.setAttribute('aria-expanded', String(open));
       toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      syncInert();
       if (open) {
         var first = nav.querySelector('a');
         if (first) first.focus();
       }
     }
 
-    toggle.addEventListener('click', function () {
-      setOpen(!document.body.classList.contains('nav-open'));
-    });
+    toggle.addEventListener('click', function () { setOpen(!isOpen()); });
     if (backdrop) backdrop.addEventListener('click', function () { setOpen(false); });
 
     nav.addEventListener('click', function (e) {
@@ -372,18 +387,37 @@
     });
 
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && document.body.classList.contains('nav-open')) {
+      if (!isOpen()) return;
+
+      if (e.key === 'Escape') {
         setOpen(false);
         toggle.focus();
+        return;
       }
+
+      /* The drawer covers the page, so tabbing has to stay in it —
+         otherwise focus walks off into content sitting behind a scrim.
+         The toggle is part of the loop because it is the way out. */
+      if (e.key !== 'Tab' || !mobile.matches) return;
+      var stops = $$('a[href], button', nav).concat([toggle])
+        .filter(function (el) { return el.offsetParent !== null; });
+      if (!stops.length) return;
+      var first = stops[0];
+      var last = stops[stops.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     });
 
     /* Reset if the viewport grows past the mobile breakpoint.
        addListener is the deprecated fallback for older Safari. */
-    var mq = window.matchMedia('(min-width: 861px)');
-    var onChange = function (e) { if (e.matches) setOpen(false); };
-    if (mq.addEventListener) mq.addEventListener('change', onChange);
-    else if (mq.addListener) mq.addListener(onChange);
+    var onChange = function () {
+      if (!mobile.matches) setOpen(false);
+      else syncInert();
+    };
+    if (mobile.addEventListener) mobile.addEventListener('change', onChange);
+    else if (mobile.addListener) mobile.addListener(onChange);
+
+    syncInert();
   }
 
   /* ==========================================================
@@ -400,8 +434,11 @@
       if (header) header.classList.toggle('is-scrolled', y > 20);
       if (topBtn) topBtn.classList.toggle('is-visible', y > 400);
       if (bar) {
+        /* scaleX rather than width: width relays out the bar (and its
+           box shadow) on every frame of every scroll. Browsers that
+           support scroll() drive this from CSS and never reach here. */
         var max = document.documentElement.scrollHeight - window.innerHeight;
-        bar.style.width = (max > 0 ? (y / max) * 100 : 0) + '%';
+        bar.style.transform = 'scaleX(' + (max > 0 ? Math.min(y / max, 1) : 0) + ')';
       }
       ticking = false;
     }
@@ -489,6 +526,15 @@
       return;
     }
 
+    /* One listener for the whole page rather than one per element.
+       Marking an entrance as spent is what stops it replaying: see the
+       .has-revealed note in the stylesheet. */
+    document.addEventListener('animationend', function (e) {
+      if (e.animationName !== 'reveal-in' && e.animationName !== 'card-in') return;
+      e.target.classList.add('has-revealed');
+      e.target.classList.remove('is-entering');
+    });
+
     var io = new IntersectionObserver(function (entries, obs) {
       entries.forEach(function (entry) {
         if (!entry.isIntersecting) return;
@@ -497,8 +543,12 @@
       });
     }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
 
+    /* The stagger goes into --reveal-delay, which only the reveal
+       keyframes read. Setting `transition-delay` here (as this used to)
+       left up to 350ms of lag on the element permanently, so every
+       later hover on that card answered a third of a second late. */
     items.forEach(function (el, i) {
-      el.style.transitionDelay = Math.min(i % 6, 5) * 70 + 'ms';
+      el.style.setProperty('--reveal-delay', Math.min(i % 6, 5) * 70 + 'ms');
       io.observe(el);
     });
   }
@@ -532,30 +582,53 @@
     }
   }
 
+  /* Tilt and the pointer glow both answer the same event, so they are
+     read once and written once per element.
+
+     Everything is written as CUSTOM PROPERTIES rather than as an inline
+     `transform` / `transition`. Writing `transition` from here replaced
+     whatever list the component had declared for itself — after the
+     first hover a card had lost its border and shadow easing for good.
+     And an inline transform could never win against the avatar's float
+     keyframes, which is why this used to blank the animation on hover
+     and put it back on the way out. The float now rides on `translate`
+     (see the stylesheet), so both simply compose. */
   function initTilt() {
     if (!finePointer || reduceMotion) return;
 
-    $$('[data-tilt]').forEach(function (el) {
-      var max = 6;
+    var MAX = 6;
+    var tilters = $$('[data-tilt]');
+    var glowers = $$('.card, .project, .hero-stat');
+
+    tilters.forEach(function (el) {
+      el.addEventListener('pointerenter', function () {
+        el.classList.add('is-tilting');
+      });
 
       el.addEventListener('pointermove', function (e) {
         var r = el.getBoundingClientRect();
         var px = (e.clientX - r.left) / r.width - 0.5;
         var py = (e.clientY - r.top) / r.height - 0.5;
-        /* A running CSS animation outranks an inline style on the same
-           property, so the avatar's float would swallow the tilt.
-           Suspend it for as long as the pointer is on the element. */
-        el.style.animation = 'none';
-        el.style.transition = 'transform .12s linear';
-        el.style.transform =
-          'perspective(900px) rotateX(' + (-py * max).toFixed(2) + 'deg) ' +
-          'rotateY(' + (px * max).toFixed(2) + 'deg) translateY(-6px)';
+        el.style.setProperty('--tilt-x', (-py * MAX).toFixed(2) + 'deg');
+        el.style.setProperty('--tilt-y', (px * MAX).toFixed(2) + 'deg');
+        el.style.setProperty('--tilt-lift', '-6px');
       });
 
       el.addEventListener('pointerleave', function () {
-        el.style.transition = 'transform .5s cubic-bezier(.22,.61,.36,1)';
-        el.style.transform = '';
-        el.style.animation = '';
+        el.classList.remove('is-tilting');
+        el.style.removeProperty('--tilt-x');
+        el.style.removeProperty('--tilt-y');
+        el.style.removeProperty('--tilt-lift');
+      });
+    });
+
+    /* The glow is a percentage position inside the element, so it
+       survives the card being resized or reflowed mid-hover. */
+    glowers.forEach(function (el) {
+      el.addEventListener('pointermove', function (e) {
+        var r = el.getBoundingClientRect();
+        el.style.setProperty('--gx', (((e.clientX - r.left) / r.width) * 100).toFixed(1) + '%');
+        el.style.setProperty('--gy', (((e.clientY - r.top) / r.height) * 100).toFixed(1) + '%');
       });
     });
   }
@@ -568,10 +641,16 @@
         var r = el.getBoundingClientRect();
         var dx = e.clientX - (r.left + r.width / 2);
         var dy = e.clientY - (r.top + r.height / 2);
-        el.style.transform = 'translate(' + dx * 0.3 + 'px,' + dy * 0.3 + 'px)';
+        /* `translate`, not `transform`: the link's hover state is free
+           to use transform without the two overwriting each other. */
+        el.classList.add('is-magnetic');
+        el.style.setProperty('--mag-x', (dx * 0.3).toFixed(1) + 'px');
+        el.style.setProperty('--mag-y', (dy * 0.3).toFixed(1) + 'px');
       });
       el.addEventListener('pointerleave', function () {
-        el.style.transform = '';
+        el.classList.remove('is-magnetic');
+        el.style.removeProperty('--mag-x');
+        el.style.removeProperty('--mag-y');
       });
     });
   }
@@ -597,31 +676,36 @@
   /* ==========================================================
      10. PROJECTS — render, filter, search, detail modal
      ========================================================== */
+  /* Everything below is Jeff's own copy, but it still goes through
+     esc(): the Unsplash URLs carry raw ampersands, which are an entity
+     start inside an attribute, and a future project title with an
+     apostrophe or an ampersand in it should not be able to break the
+     card it is written into. */
   function coverMarkup(p) {
     /* With no image the gradient background on .project-cover shows
        through, so the emoji is the fallback rather than a blank box. */
     if (!p.image) {
-      return '<span class="cover-emoji" aria-hidden="true">' + p.emoji + '</span>';
+      return '<span class="cover-emoji" aria-hidden="true">' + esc(p.emoji) + '</span>';
     }
-    return '<img src="' + p.image + '" alt="' + (p.imageAlt || p.title) +
-      '" loading="lazy" width="800" height="450">' +
-      '<span class="cover-badge" aria-hidden="true">' + p.emoji + '</span>';
+    return '<img src="' + esc(p.image) + '" alt="' + esc(p.imageAlt || p.title) +
+      '" loading="lazy" decoding="async" width="800" height="450">' +
+      '<span class="cover-badge" aria-hidden="true">' + esc(p.emoji) + '</span>';
   }
 
   function stackMarkup(p) {
-    return p.stack.map(function (s) { return '<span>' + s + '</span>'; }).join('');
+    return p.stack.map(function (s) { return '<span>' + esc(s) + '</span>'; }).join('');
   }
 
   function linkMarkup(p) {
     var out = '';
     if (p.demo) {
-      out += '<a href="' + p.demo + '" target="_blank" rel="noopener noreferrer">' +
-        icon('external') + 'Live Demo<span class="sr-only"> for ' + p.title +
+      out += '<a href="' + esc(p.demo) + '" target="_blank" rel="noopener noreferrer">' +
+        icon('external') + 'Live Demo<span class="sr-only"> for ' + esc(p.title) +
         ' (opens in a new tab)</span></a>';
     }
     if (p.repo) {
-      out += '<a href="' + p.repo + '" target="_blank" rel="noopener noreferrer">' +
-        icon('github') + 'Code<span class="sr-only"> for ' + p.title +
+      out += '<a href="' + esc(p.repo) + '" target="_blank" rel="noopener noreferrer">' +
+        icon('github') + 'Code<span class="sr-only"> for ' + esc(p.title) +
         ' (opens in a new tab)</span></a>';
     }
     return out;
@@ -640,18 +724,18 @@
     grid.innerHTML = PROJECTS.map(function (p, i) {
       var haystack = (p.title + ' ' + p.blurb + ' ' + p.stack.join(' ')).toLowerCase();
       return '' +
-        '<article class="project reveal" data-tag="' + p.tag + '" data-id="' + p.id +
+        '<article class="project reveal" data-tag="' + esc(p.tag) + '" data-id="' + esc(p.id) +
           '" style="--i:' + i + '" data-search="' + esc(haystack) + '">' +
           '<div class="project-cover">' + coverMarkup(p) + '</div>' +
           '<div class="project-body">' +
-            '<h3>' + p.title + '</h3>' +
-            '<p>' + p.blurb + '</p>' +
+            '<h3>' + esc(p.title) + '</h3>' +
+            '<p>' + esc(p.blurb) + '</p>' +
             '<div class="stack">' + stackMarkup(p) + '</div>' +
             '<div class="project-actions">' +
               linkMarkup(p) +
-              '<button type="button" class="details-btn" data-id="' + p.id + '">' +
+              '<button type="button" class="details-btn" data-id="' + esc(p.id) + '">' +
                 'Details' + icon('arrow-right') +
-                '<span class="sr-only"> about ' + p.title + '</span>' +
+                '<span class="sr-only"> about ' + esc(p.title) + '</span>' +
               '</button>' +
             '</div>' +
           '</div>' +
@@ -675,10 +759,26 @@
         var byTag = activeFilter === 'all' || card.dataset.tag === activeFilter;
         var byText = !q || card.dataset.search.indexOf(q) !== -1;
         var match = byTag && byText;
+        var was = !card.classList.contains('is-hidden');
+
         card.classList.toggle('is-hidden', !match);
-        if (match) {
-          shown++;
-          if (!firstPass) card.classList.add('is-visible');
+        if (!match) return;
+
+        shown++;
+        if (firstPass) return;
+        card.classList.add('is-visible');
+
+        /* A card arriving back into the grid gets its own short entrance,
+           so a filter change reads as the set rearranging rather than as
+           the page redrawing. Cards that were already there stay put —
+           re-animating them would be motion with nothing behind it. */
+        if (!was && !reduceMotion) {
+          card.classList.remove('is-entering');
+          /* Reading offsetWidth restarts the animation; without it the
+             class goes back on in the same frame it came off and the
+             browser never sees a change. */
+          void card.offsetWidth;
+          card.classList.add('is-entering');
         }
       });
       firstPass = false;
@@ -738,17 +838,17 @@
       lastFocused = document.activeElement;
 
       body.innerHTML =
-        '<h3 id="modal-title">' + p.title + '</h3>' +
+        '<h3 id="modal-title">' + esc(p.title) + '</h3>' +
         '<div class="stack">' + stackMarkup(p) + '</div>' +
         '<dl>' +
-          '<div><dt>The problem</dt><dd>' + p.problem + '</dd></div>' +
-          '<div><dt>My role</dt><dd>' + p.role + '</dd></div>' +
-          '<div><dt>Outcome</dt><dd>' + p.outcome + '</dd></div>' +
+          '<div><dt>The problem</dt><dd>' + esc(p.problem) + '</dd></div>' +
+          '<div><dt>My role</dt><dd>' + esc(p.role) + '</dd></div>' +
+          '<div><dt>Outcome</dt><dd>' + esc(p.outcome) + '</dd></div>' +
         '</dl>' +
         (p.demo || p.repo
           ? '<div class="modal-actions">' +
-              (p.demo ? '<a class="btn btn-sm" href="' + p.demo + '" target="_blank" rel="noopener noreferrer">View Live</a>' : '') +
-              (p.repo ? '<a class="btn-outline btn-sm" href="' + p.repo + '" target="_blank" rel="noopener noreferrer">View Code</a>' : '') +
+              (p.demo ? '<a class="btn btn-sm" data-ripple href="' + esc(p.demo) + '" target="_blank" rel="noopener noreferrer">View Live</a>' : '') +
+              (p.repo ? '<a class="btn-outline btn-sm" data-ripple href="' + esc(p.repo) + '" target="_blank" rel="noopener noreferrer">View Code</a>' : '') +
             '</div>'
           : '');
 
@@ -1027,10 +1127,20 @@
     var wantsParallax = bg && !reduceMotion && finePointer;
     var ticking = false;
 
+    /* .hero-bg is inset by -6% top and bottom, so 6% of the hero's
+       height is all the travel there is. The old factor of 0.32
+       exhausted that within the first 200px of scroll and then kept
+       going, dragging the photo's top edge down into the frame and
+       leaving a band of bare page above it. */
+    var HEADROOM = 0.06;
+
     function update() {
       var y = window.scrollY;
       var h = hero.offsetHeight;
-      if (wantsParallax && y < h) bg.style.transform = 'translate3d(0,' + (y * 0.32) + 'px,0)';
+      if (wantsParallax && y < h) {
+        var shift = Math.min(y * 0.32, h * HEADROOM);
+        bg.style.transform = 'translate3d(0,' + shift.toFixed(1) + 'px,0)';
+      }
       if (cue) {
         var fade = Math.max(0, 1 - y / 260);
         cue.style.opacity = fade;
@@ -1087,15 +1197,52 @@
     }
     sync();
 
-    function setTheme(theme, announce) {
+    function commit(theme) {
       document.documentElement.setAttribute('data-theme', theme);
       try { localStorage.setItem('jeff-theme', theme); } catch (e) {}
       sync();
+    }
+
+    /* Where the browser has the View Transitions API, the swap is a
+       single circular wipe growing out of whatever was pressed, rather
+       than a dozen background-colour transitions crossing at slightly
+       different speeds. `origin` is the element the gesture came from;
+       without one the wipe starts from the middle of the screen. */
+    function setTheme(theme, announce, origin) {
+      var root = document.documentElement;
+
+      var run = function () { commit(theme); };
+
+      if (!reduceMotion && typeof document.startViewTransition === 'function') {
+        var box = origin && origin.getBoundingClientRect
+          ? origin.getBoundingClientRect()
+          : null;
+        var x = box ? box.left + box.width / 2 : window.innerWidth / 2;
+        var y = box ? box.top + box.height / 2 : window.innerHeight / 2;
+
+        /* Radius to the furthest corner, so the circle always finishes
+           by covering the viewport rather than stopping short of it. */
+        var r = Math.hypot(Math.max(x, window.innerWidth - x),
+                           Math.max(y, window.innerHeight - y));
+
+        root.style.setProperty('--vt-x', x + 'px');
+        root.style.setProperty('--vt-y', y + 'px');
+        root.style.setProperty('--vt-r', Math.ceil(r) + 'px');
+        root.classList.add('is-vt');
+
+        var vt = document.startViewTransition(run);
+        vt.finished
+          .catch(function () {})
+          .then(function () { root.classList.remove('is-vt'); });
+      } else {
+        run();
+      }
+
       if (announce) toast(theme === 'light' ? 'Light theme' : 'Dark theme', 'sun');
     }
 
     btn.addEventListener('click', function () {
-      setTheme(currentTheme() === 'light' ? 'dark' : 'light', true);
+      setTheme(currentTheme() === 'light' ? 'dark' : 'light', true, btn);
     });
 
     /* Keep following the OS until the visitor states a preference. */
@@ -1115,7 +1262,7 @@
       if (e.key !== 'D' || !e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
       if (isTyping()) return;
       e.preventDefault();
-      setTheme(currentTheme() === 'light' ? 'dark' : 'light', true);
+      setTheme(currentTheme() === 'light' ? 'dark' : 'light', true, btn);
     });
 
     THEME_SET = setTheme;
@@ -1158,7 +1305,7 @@
     ];
 
     host.innerHTML = STATS.map(function (s) {
-      return '<div class="hero-stat">' +
+      return '<div class="hero-stat" role="listitem">' +
         '<b data-to="' + s.n + '"' +
           (s.plus ? ' data-suffix="+"' : '') +
           (s.suffix ? ' data-suffix="' + s.suffix + '"' : '') +

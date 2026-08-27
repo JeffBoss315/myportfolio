@@ -110,15 +110,32 @@
   --shadow: var(--e2);
 }
 
-/* The theme switch itself. Suppressed on the very first paint (see
-   .is-booting) so the page never fades in from the wrong theme. */
-:root:not(.is-booting) body,
-:root:not(.is-booting) .header,
-:root:not(.is-booting) .card,
-:root:not(.is-booting) .section {
-  transition: background-color .4s var(--ease), color .4s var(--ease),
-              border-color .4s var(--ease);
+/* ---------- the theme fade ----------
+   `transition` is a single shorthand, so a rule that declares it does
+   not add to what an element already had — it REPLACES it. This used
+   to be written as `:root:not(.is-booting) .card { transition: … }`,
+   which at (0,3,0) outranked `.card`'s own (0,1,0) rule further down
+   the file. The result was that .card, .header, .section and body all
+   silently lost every transition they declared for themselves: card
+   and header hover states snapped instead of easing, and nothing on
+   the page showed it, because the rule that broke them looked like it
+   was only about colour.
+
+   So the fade is a value now, not a rule. Each component pastes it in
+   front of its own list and keeps everything after it. Where a
+   property appears twice, the later entry wins — which is what puts
+   the component's own timing in charge of its own hover. */
+:root {
+  --theme-fade: background-color .4s var(--ease), color .4s var(--ease),
+                border-color .4s var(--ease);
 }
+/* First paint only: the theme is already correct before this file is
+   parsed, so there is nothing to fade FROM. */
+:root.is-booting {
+  --theme-fade: background-color 0s, color 0s, border-color 0s;
+}
+body { transition: var(--theme-fade); }
+.section { transition: var(--theme-fade); }
 
 /* ---------- base ---------- */
 *,
@@ -128,6 +145,10 @@
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  /* The modal and the palette lock body scroll. Without a reserved
+     gutter the scrollbar disappears with them and the whole page
+     jumps sideways by its width. */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -144,6 +165,11 @@ a { color: inherit; text-decoration: none; }
 button, input, textarea { font: inherit; color: inherit; }
 
 ::selection { background: var(--main); color: var(--on-accent); }
+
+/* Headings break on meaning rather than on the last word that fits;
+   body copy just avoids orphans. Ignored where unsupported. */
+h1, h2, h3, .section-title, .hero h1 { text-wrap: balance; }
+p, .hero-blurb, .section-sub, li { text-wrap: pretty; }
 
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { background: var(--dark-2); }
@@ -278,9 +304,24 @@ button, input, textarea { font: inherit; color: inherit; }
 .scroll-progress span {
   display: block;
   height: 100%;
-  width: 0;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
   background: linear-gradient(90deg, var(--main-soft), var(--main));
   box-shadow: 0 0 12px rgb(var(--main-rgb) / .7);
+}
+
+/* Where the browser can drive it off the scroll position itself, it
+   does — no scroll listener, no main-thread work, no jitter. The JS
+   path below stays as the fallback and simply never fires here. */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .scroll-progress span {
+      animation: progress-grow linear both;
+      animation-timeline: scroll(root block);
+    }
+    @keyframes progress-grow { to { transform: scaleX(1); } }
+  }
 }
 
 /* Soft glow that trails the pointer. Desktop only, never interactive. */
@@ -313,7 +354,7 @@ body.has-pointer .spotlight { opacity: 1; }
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid transparent;
-  transition: border-color .3s var(--ease), background .3s var(--ease);
+  transition: var(--theme-fade), border-color .3s var(--ease), background .3s var(--ease);
   z-index: 1000;
 }
 .header.is-scrolled {
@@ -520,6 +561,7 @@ body.nav-open { overflow: hidden; }
   position: relative;
   z-index: 2;
   min-height: 100svh;
+  scroll-margin-top: 0;
   display: grid;
   place-items: center;
   text-align: center;
@@ -599,6 +641,11 @@ body.nav-open { overflow: hidden; }
   background: linear-gradient(140deg, var(--main), var(--main-soft));
   box-shadow: 0 14px 44px rgb(0 0 0 / .5), 0 0 46px rgb(var(--main-rgb) / .22);
   animation: float 6s ease-in-out infinite;
+  /* `transform` belongs to the tilt; the float rides on `translate`,
+     which the browser composes with it. Two properties, no conflict —
+     the avatar can drift and tilt at the same time. */
+  transition: transform var(--tilt-speed, .5s) var(--tilt-ease, var(--ease)),
+              box-shadow .4s var(--ease);
 }
 .hero-avatar img {
   width: 100%; height: 100%;
@@ -606,7 +653,7 @@ body.nav-open { overflow: hidden; }
   object-fit: cover;
   border: 3px solid rgb(var(--bg-rgb) / .55);
 }
-@keyframes float { 50% { transform: translateY(-12px); } }
+@keyframes float { 50% { translate: 0 -12px; } }
 
 .hero-greet {
   font-size: clamp(15px, 2vw, 18px);
@@ -667,10 +714,14 @@ body.nav-open { overflow: hidden; }
   background: rgb(var(--fg-rgb) / .06);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  translate: var(--mag-x, 0px) var(--mag-y, 0px);
   transition: background .3s var(--ease), color .3s var(--ease),
-              border-color .3s var(--ease);
-  will-change: transform;
+              border-color .3s var(--ease), translate .45s var(--ease);
+  will-change: translate;
 }
+/* While the pointer is on it the pull must track, not trail — the lag
+   only belongs to the journey back. */
+.social a.is-magnetic { transition-duration: .3s, .3s, .3s, .08s; }
 .social a:hover {
   background: var(--main);
   border-color: var(--main);
@@ -760,16 +811,42 @@ body.nav-open { overflow: hidden; }
 }
 .card {
   position: relative;
+  isolation: isolate;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 30px;
-  transition: border-color .35s var(--ease), box-shadow .35s var(--ease);
+  transition: var(--theme-fade),
+              border-color .35s var(--ease), box-shadow .35s var(--ease),
+              transform var(--tilt-speed, .5s) var(--tilt-ease, var(--ease));
 }
 .card:hover {
   border-color: var(--main);
   box-shadow: 0 18px 40px rgb(var(--main-rgb) / .16);
 }
+
+/* ---------- pointer glow ----------
+   A soft accent wash that follows the cursor across the surface. It
+   sits at z-index -1 inside the card's own stacking context, so it
+   paints over the card's background but under everything written on
+   it — the text never has to read through it. */
+.card::after,
+.project::after,
+.hero-stat::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .4s var(--ease);
+  background: radial-gradient(240px circle at var(--gx, 50%) var(--gy, 50%),
+                              rgb(var(--main-rgb) / .16), transparent 68%);
+}
+.card:hover::after,
+.project:hover::after,
+.hero-stat:hover::after { opacity: 1; }
 .card h3 {
   display: flex;
   align-items: center;
@@ -798,12 +875,24 @@ body.nav-open { overflow: hidden; }
   box-shadow: 0 0 10px rgb(var(--main-rgb) / .8);
 }
 
-/* pointer-tracked tilt */
+/* ---------- pointer-tracked tilt ----------
+   JS writes two angles and a lift; the transform is assembled here.
+   Deliberately no `transition` on this selector: `transition` is one
+   property, and an attribute selector declaring it would silently
+   replace the border/shadow transition every tilted component sets on
+   itself. Each component includes `transform` in its own list instead,
+   timed by --tilt-speed. */
 [data-tilt] {
   transform-style: preserve-3d;
   will-change: transform;
-  transition: transform .4s var(--ease);
+  transform: perspective(900px)
+             rotateX(var(--tilt-x, 0deg))
+             rotateY(var(--tilt-y, 0deg))
+             translateY(var(--tilt-lift, 0px));
 }
+/* Tracking the pointer has to feel direct; returning to rest is the
+   only part that should ease. */
+[data-tilt].is-tilting { --tilt-speed: .12s; --tilt-ease: linear; }
 
 /* ---------- services ---------- */
 .services-grid { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
@@ -953,15 +1042,22 @@ body.nav-open { overflow: hidden; }
 }
 
 .project {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   overflow: hidden;
-  transition: border-color .35s var(--ease), box-shadow .35s var(--ease);
+  transition: border-color .35s var(--ease), box-shadow .35s var(--ease),
+              transform .45s var(--ease);
 }
-.project:hover { border-color: var(--main); box-shadow: var(--shadow); }
+.project:hover {
+  border-color: var(--main);
+  box-shadow: var(--shadow);
+  transform: translateY(-6px);
+}
 .project.is-hidden { display: none; }
 
 .project-cover {
@@ -1338,13 +1434,34 @@ body.nav-open { overflow: hidden; }
 
 /* ---------- scroll reveal ----------
    Only applied once JS confirms it is running, so a script failure
-   can never leave the page blank. */
-html.js .reveal {
-  opacity: 0;
-  transform: translateY(44px);
-  transition: opacity .7s var(--ease), transform .7s var(--ease);
+   can never leave the page blank.
+
+   An ANIMATION rather than a transition, for two reasons. A transition
+   here had to be declared on `transition`, and this selector outranks
+   every component's own rule — so `.card`, `.project` and `.tl-item`
+   all lost the border and shadow transitions they declare, and their
+   hover states snapped instead of easing. And the stagger was applied
+   as an inline `transition-delay`, which then sat on the element for
+   the rest of the session, delaying every later hover by up to 350ms.
+
+   `backwards` fill is what makes this work: the from-state applies
+   during the stagger delay, and once the animation ends it stops
+   applying altogether — so the element falls back to its own resting
+   transform and a pointer-driven tilt is free to take over. */
+html.js .reveal { opacity: 0; }
+html.js .reveal.is-visible {
+  opacity: 1;
+  animation: reveal-in .7s var(--ease) var(--reveal-delay, 0ms) backwards;
 }
-html.js .reveal.is-visible { opacity: 1; transform: none; }
+@keyframes reveal-in {
+  from { opacity: 0; transform: translateY(44px); }
+}
+/* An entrance is a one-shot. Once it has played, the declaration goes
+   away — otherwise any later change to this element's `animation`
+   value (a filter class going on or coming off, say) re-resolves the
+   property, and the browser reads that as a brand new animation and
+   fades the card in all over again from nothing. */
+html.js .reveal.is-visible.has-revealed { animation: none; }
 
 /* ---------- responsive ---------- */
 @media (max-width: 1024px) {
@@ -1390,10 +1507,11 @@ html.js .reveal.is-visible { opacity: 1; transform: none; }
   #topBtn { right: 16px; bottom: 16px; }
 }
 
-/* Tilt and spotlight are pointer affordances — off on touch. */
+/* Tilt, glow and spotlight are pointer affordances — off on touch. */
 @media (hover: none) {
   .spotlight { display: none; }
   [data-tilt] { transform: none !important; }
+  .card::after, .project::after, .hero-stat::after { display: none; }
 }
 
 /* ---------- motion preferences ---------- */
@@ -1405,7 +1523,9 @@ html.js .reveal.is-visible { opacity: 1; transform: none; }
     transition-duration: .001ms !important;
   }
   html.js .reveal { opacity: 1; transform: none; }
-  .hero-avatar { animation: none; }
+  html.js .reveal.is-visible { animation: none; }
+  .timeline::after { animation: none; height: 0; }
+  .hero-avatar { animation: none; translate: none; }
   .cursor { animation: none; opacity: 1; }
   .status-pill .dot { animation: none; }
   .scroll-cue .scroll-line::after { animation: none; opacity: .6; }
@@ -1623,6 +1743,8 @@ html.js .reveal.is-visible { opacity: 1; transform: none; }
   margin-top: 34px;
 }
 .hero-stat {
+  position: relative;
+  isolation: isolate;
   min-width: 120px;
   padding: 14px 20px;
   text-align: center;
@@ -1654,6 +1776,11 @@ html.js .reveal.is-visible { opacity: 1; transform: none; }
 /* ---------- timeline ---------- */
 .timeline {
   position: relative;
+  /* Its own stacking context, so the spine and its fill can be pushed
+     behind the entry markers. `::after` is generated as the element's
+     LAST child, so without this the fill painted over every dot it was
+     supposed to run behind. */
+  z-index: 0;
   max-width: 860px;
   margin: 0 auto;
   padding-left: 34px;
@@ -1663,11 +1790,38 @@ html.js .reveal.is-visible { opacity: 1; transform: none; }
 .timeline::before {
   content: '';
   position: absolute;
+  z-index: -1;
   left: 9px; top: 8px; bottom: 8px;
   width: 2px;
   border-radius: 2px;
   background: linear-gradient(to bottom, var(--main), rgb(var(--main-rgb) / .1));
 }
+/* Where scroll-driven animation is available the spine fills as the
+   section passes, so the reader's progress through the story is drawn
+   on the story itself. Everywhere else the gradient track above is
+   already the finished state, so nothing is missing. */
+.timeline::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 9px; top: 8px;
+  width: 2px;
+  height: 0;
+  border-radius: 2px;
+  background: var(--main);
+  box-shadow: 0 0 14px rgb(var(--main-rgb) / .55);
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .timeline::after {
+      animation: tl-fill linear both;
+      animation-timeline: view();
+      animation-range: cover 14% cover 76%;
+    }
+    @keyframes tl-fill { to { height: calc(100% - 16px); } }
+  }
+}
+
 .tl-item { position: relative; padding-bottom: 38px; }
 .tl-item:last-child { padding-bottom: 0; }
 .tl-item::before {
@@ -1835,7 +1989,8 @@ html.js .reveal.is-visible { opacity: 1; transform: none; }
   .hero-stat { min-width: 0; padding: 12px 10px; }
   .timeline { padding-left: 26px; }
   .tl-item::before { left: -26px; width: 16px; height: 16px; }
-  .timeline::before { left: 7px; }
+  .timeline::before,
+  .timeline::after { left: 7px; }
 }
 
 /* ---------- motion preferences (additions) ---------- */
@@ -1845,4 +2000,221 @@ html.js .reveal.is-visible { opacity: 1; transform: none; }
   .palette-panel,
   .toast,
   .tl-item::before { transition: none; }
+}
+
+
+/* ============================================================
+   MODERN LAYER
+   View-transition theme swap, ambient section light, button
+   sheen, and the focus treatment they all share.
+   ============================================================ */
+
+/* ---------- theme swap as a view transition ----------
+   The toggle used to cross-fade a dozen background-colour transitions
+   at slightly different speeds, which read as the page hesitating.
+   Where the browser supports it, the whole document is swapped in one
+   frame instead and the new theme is wiped in as a circle growing out
+   of the button that was pressed — one gesture, one movement, and the
+   origin of the change is where the visitor's eye already is.
+
+   Browsers without the API fall through to the colour transitions,
+   which is exactly what the page did before. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }
+
+html.is-vt::view-transition-new(root) {
+  animation: vt-wipe .5s var(--ease);
+}
+@keyframes vt-wipe {
+  from { clip-path: circle(0 at var(--vt-x, 50%) var(--vt-y, 50%)); }
+  to   { clip-path: circle(var(--vt-r, 150vmax) at var(--vt-x, 50%) var(--vt-y, 50%)); }
+}
+
+/* The per-element colour transitions are the fallback path. When the
+   wipe is doing the work they would run underneath it at their own
+   pace and smear the edge, so they stand down for its duration. */
+html.is-vt body,
+html.is-vt .header,
+html.is-vt .card,
+html.is-vt .section { transition: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  html.is-vt::view-transition-new(root) { animation: none; }
+}
+
+/* ---------- ambient section light ----------
+   One accent bloom per band, sized off the viewport and pinned behind
+   everything. It gives the long scroll between sections a sense of
+   depth without adding a second hue or another image to download. */
+.section--alt::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: -14%;
+  right: -10%;
+  width: min(760px, 70vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgb(var(--main-rgb) / .07), transparent 66%);
+}
+.section:not(.section--alt)::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  bottom: -16%;
+  left: -12%;
+  width: min(680px, 64vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgb(var(--main-rgb) / .06), transparent 66%);
+}
+.section { overflow: hidden; isolation: isolate; }
+
+/* ---------- button sheen ----------
+   A single highlight crossing the fill on hover. It is a pseudo
+   element rather than a background animation so it cannot interfere
+   with the accent the button is painted in. */
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 -60%;
+  width: 45%;
+  pointer-events: none;
+  transform: skewX(-18deg);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / .3), transparent);
+  transition: translate .6s var(--ease);
+}
+.btn:hover::before { translate: 360% 0; }
+
+/* ---------- focus ----------
+   One ring, drawn outside the element and never clipped by it, so it
+   is legible on a card, on a filled button and on a photo alike. */
+:focus-visible {
+  outline: 2px solid var(--main);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgb(var(--main-rgb) / .22);
+}
+.project:focus-within { border-color: rgb(var(--main-rgb) / .55); }
+
+/* Nothing below the fold should still be animating while a dialog is
+   open — it is a distraction behind a scrim nobody can reach. */
+body:has(.modal.is-open) .hero-avatar,
+body:has(.palette.is-open) .hero-avatar { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn::before { display: none; }
+  .section--alt::before,
+  .section:not(.section--alt)::before { display: none; }
+}
+
+/* ---------- filtered cards arriving back into the grid ----------
+   Written to outrank the reveal rule above rather than to sit beside
+   it: both set `animation`, and the reveal selector is the more
+   specific of the two, so a plainer selector here would have been
+   overruled and the entrance would simply never have played. */
+html.js .reveal.is-visible.is-entering {
+  animation: card-in .45s var(--ease) backwards;
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(14px) scale(.97); }
+}
+
+/* ---------- higher contrast on request ----------
+   Everything here is a hairline or a wash at 6-16% alpha. That is the
+   right weight for the default, and the wrong weight for someone who
+   has asked their system for more separation. */
+@media (prefers-contrast: more) {
+  :root { --line: #35415a; --muted: #c3d0e0; }
+  :root[data-theme="light"] { --line: #9aa6bb; --muted: #2f3a4f; }
+  .card, .project, .tag, .search-box, .field input, .field textarea { border-width: 2px; }
+  .card::after, .project::after, .hero-stat::after,
+  .section--alt::before, .section:not(.section--alt)::before,
+  .spotlight { display: none; }
+  .navbar a[aria-current="true"] { text-decoration: underline; text-underline-offset: 5px; }
+}
+
+/* ---------- print ----------
+   A portfolio gets printed and PDF'd more often than most sites, so
+   the printed page is a real output, not an afterthought. Everything
+   that only exists to be interacted with comes out; everything that
+   carries information stays, in ink on white, with the URLs that were
+   hiding behind link text written out beside them. */
+@media print {
+  :root, :root[data-theme="light"], :root[data-theme="dark"] {
+    --main-rgb: 0 90 120;
+    --main-ink: #00506b;
+    --text: #000;
+    --muted: #333;
+    --gray: #222;
+    --line: #bbb;
+    --dark: #fff;
+    --dark-2: #fff;
+    --card: #fff;
+    --footer-bg: #fff;
+    --shadow: none;
+  }
+
+  .header, .footer .social, #topBtn, .scroll-progress, .spotlight,
+  .preloader, .palette, .modal, .toasts, .scroll-cue, .nav-backdrop,
+  .project-controls, .result-count, .hero-stats, .status-pill,
+  #contactForm, .form-lead, .copy-btn, .hero-bg, .hero-scrim,
+  .service-media, .project-cover, .section--alt::before,
+  .section:not(.section--alt)::before { display: none !important; }
+
+  html, body { background: #fff !important; color: #000 !important; }
+
+  /* The footer carries its own dark token set so it can stay a dark
+     band in both themes. On paper that means near-white ink, so it
+     hands the tokens back. */
+  .footer {
+    color-scheme: light;
+    --text: #000;
+    --muted: #333;
+    --fg-rgb: 0 0 0;
+    background: #fff !important;
+    color: #000 !important;
+    border-top: 1pt solid #bbb;
+  }
+  .footer .logo span, .eyebrow, .tl-when, .card h3 .icon { color: #00506b !important; }
+
+  .hero {
+    min-height: auto;
+    padding: 0 0 24pt;
+    color: #000;
+    --text: #000;
+    --muted: #333;
+  }
+  .hero-greet, .hero-blurb, .hero-role, .hero-local { color: #333 !important; }
+  .section { padding: 18pt 0; overflow: visible; break-inside: auto; }
+  .card, .project, .tl-item {
+    border: 1pt solid #bbb;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  .section-title { font-size: 18pt; }
+  .hero h1 { font-size: 26pt; }
+  html.js .reveal, html.js .reveal.is-visible {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+  .project.is-hidden { display: flex !important; }
+
+  /* A printed link is a dead end unless the address comes with it. */
+  .info-row a[href^="mailto:"]::after,
+  .info-row a[href^="tel:"]::after { content: ''; }
+  .project-actions a[href]::after {
+    content: ' (' attr(href) ')';
+    font-size: 8pt;
+    color: #555;
+    word-break: break-all;
+  }
+  .details-btn { display: none !important; }
 }
