@@ -46,6 +46,13 @@
     return !!el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable);
   }
 
+  /* True while a dialog covers the page. Page-level shortcuts must not
+     reach through it — "/" used to move focus to the project search
+     sitting behind an open project modal. */
+  function overlayOpen() {
+    return !!document.querySelector('.modal.is-open, .palette.is-open, body.nav-open');
+  }
+
   /* ---------- toasts ----------
      Small, transient confirmations. The container is aria-live, so the
      text is announced once and the visual is pure decoration on top. */
@@ -115,24 +122,229 @@
      ----------------------------------------------------------
      The only block you need to edit to update projects.
 
-       demo  : live URL.  Leave '' and no "Live Demo" link renders.
-       repo  : source URL. Leave '' and no "Code" link renders.
-       image : screenshot path e.g. 'img/hospital.png'.
-               Leave '' to fall back to the generated gradient cover.
+       tags     : filter keys (see FILTERS). A project can sit in
+                  several — CHAMAA is both fintech and desktop.
+       platforms: where it runs; shown on the cover and in the modal.
+       features : bullet list shown in the detail modal.
+       featured : true pins a "Featured" ribbon on the card.
+       demo     : live URL.  Leave '' and no "Live Demo" link renders.
+       repo     : source URL. Kept for reference only — source links
+                  are deliberately not shown on the site.
+       image    : cover photo. Leave '' to fall back to the gradient
+                  cover with the emoji.
 
      Empty strings are deliberate — a missing link beats a link
      that goes nowhere.
      ========================================================== */
+  var UNSPLASH = function (id) {
+    return 'https://images.unsplash.com/photo-' + id + '?auto=format&fit=crop&w=800&q=70';
+  };
+
   var PROJECTS = [
+    {
+      id: 'gaming-nation',
+      title: 'Gaming Nation — VTC Fleet Platform',
+      tags: ['web', 'media', 'desktop'],
+      platforms: ['Web', 'Windows', 'Android'],
+      featured: true,
+      emoji: '🚛',
+      image: UNSPLASH('1542751371-adc38448a05e'),
+      imageAlt: 'Gamer at a multi-monitor racing setup',
+      blurb: 'Real-time management platform for a virtual trucking company. A driver client reads Euro Truck Simulator 2 telemetry, records every delivery and syncs it to a live admin console.',
+      stack: ['JavaScript', 'Electron', 'Capacitor', 'Supabase', 'Node.js'],
+      features: [
+        'Live truck position plotted on an ETS2 / ATS world map from the SCS telemetry SDK',
+        'Runs start and finish automatically when a job is taken and delivered in game',
+        'Distance, time at the wheel and earnings recorded against each driver',
+        'Admin console showing who is online, on a job and how far along',
+        'Ships as a web app, installable PWA, Windows .exe and Android .apk from one codebase'
+      ],
+      problem: 'Virtual trucking companies tracked deliveries by screenshot and spreadsheet, so dispatchers never knew who was actually driving.',
+      role: 'Sole developer — telemetry bridge, driver client, real-time sync and the management console.',
+      outcome: 'Drivers just play; the fleet, runs and earnings update on every screen in real time with no manual logging.',
+      demo: '',
+      repo: 'https://github.com/JeffBoss315/Gaming-Nation'
+    },
+    {
+      id: 'chamaa',
+      title: 'CHAMAA — SACCO & Chama Manager',
+      tags: ['fintech', 'web', 'desktop'],
+      platforms: ['Web', 'Windows', 'Offline HTML'],
+      featured: true,
+      emoji: '💰',
+      image: UNSPLASH('1579621970563-ebec7560ff3e'),
+      imageAlt: 'Seedling growing out of a pile of coins',
+      blurb: 'Digital SACCO and chama management for Kenyan savings groups — members, contributions, loans, repayments and expenses, with a full audit trail.',
+      stack: ['Python', 'Flask', 'SQLAlchemy', 'MySQL', 'PyInstaller'],
+      features: [
+        'Dashboard with KPIs, 6-month cash-flow chart and top savers',
+        'Contributions per fund via M-Pesa, bank or cash with auto references',
+        'Loan calculator, approve / reject flow and balance-aware repayments',
+        'Every change written to an audit trail; CSV export everywhere',
+        'Three editions from one design: Flask web app, Windows .exe and a zero-install offline HTML file'
+      ],
+      problem: 'Chama treasurers kept contributions and loans in exercise books, which made balances slow to check and easy to dispute.',
+      role: 'Sole developer — data model, Flask app, desktop launcher and the standalone offline build.',
+      outcome: 'Every member balance, loan and shilling is traceable in seconds, and the group can run it on a hosted server, a single PC or a browser file.',
+      demo: '',
+      repo: ''
+    },
+    {
+      id: 'pos',
+      title: 'KashFlow — Multi-Shop POS',
+      tags: ['fintech', 'web'],
+      platforms: ['Web'],
+      featured: true,
+      emoji: '🧾',
+      image: UNSPLASH('1556742049-0cfed4f6a45d'),
+      imageAlt: 'Customer paying at a shop counter',
+      blurb: 'Point-of-sale and back office for retail shops: sales, stock, suppliers, returns, expenses and profit & loss, with M-Pesa payments and a separate database per shop.',
+      stack: ['Python', 'Flask', 'SQLite', 'M-Pesa Daraja'],
+      features: [
+        'Fast till screen with printable receipts and returns handling',
+        'Inventory with stock movements, suppliers and low-stock tracking',
+        'Customers, expenses and a profit & loss report by period',
+        'Staff accounts with granular permissions and an activity log',
+        'Multi-tenant: every shop gets its own isolated SQLite database'
+      ],
+      problem: 'Small shops sold from memory and a notebook, so stock losses and real profit were invisible until month end.',
+      role: 'Sole developer — schema, tenancy model, till UI, M-Pesa integration and reporting.',
+      outcome: 'Owners see today’s takings, stock and profit live, and one install can host many shops without any shop seeing another’s data.',
+      demo: '',
+      repo: ''
+    },
+    {
+      id: 'wifi',
+      title: 'KAA ONLINE — WiFi Hotspot Billing',
+      tags: ['fintech', 'web'],
+      platforms: ['Web'],
+      emoji: '📶',
+      image: UNSPLASH('1544197150-b99a580bb7a8'),
+      imageAlt: 'Network switch with patch cables',
+      blurb: 'Captive portal for a WiFi hotspot: customers pick a plan, pay by M-Pesa STK push and are provisioned on the MikroTik router automatically.',
+      stack: ['Node.js', 'Express', 'M-Pesa Daraja', 'MikroTik', 'MySQL'],
+      features: [
+        'Plan picker with M-Pesa STK push and live payment polling',
+        'Automatic hotspot provisioning through the RouterOS REST API',
+        'Crypto-random, unambiguous voucher codes with a session countdown',
+        'Demo mode runs the full payment flow without moving real money',
+        'Rate limiting, hardened headers and a node:test smoke suite'
+      ],
+      problem: 'Hotspot operators sold access by hand — collecting cash, typing vouchers and forgetting to disconnect expired users.',
+      role: 'Sole developer — Express API, Daraja integration, MikroTik provisioning and the portal UI.',
+      outcome: 'Pay-and-connect is fully self-service: payment confirmed, voucher issued and router updated in one flow.',
+      demo: '',
+      repo: ''
+    },
+    {
+      id: 'utility-billing',
+      title: 'Tenant Utility Billing System',
+      tags: ['fintech', 'web', 'desktop'],
+      platforms: ['Web', 'Windows', 'Offline HTML'],
+      emoji: '⚡',
+      image: UNSPLASH('1545324418-cc1a3fa10c00'),
+      imageAlt: 'Modern apartment building',
+      blurb: 'Bills tenants from electricity and water sub-meter readings using tiered tariffs, service charge and tax, then issues PDF invoices by email or SMS.',
+      stack: ['Python', 'Flask', 'SQLAlchemy', 'ReportLab', 'SQLite'],
+      features: [
+        'Live bill preview while a meter reading is typed, validated against the last one',
+        'Tariff builder with contiguous tiers and a bill simulator',
+        'PDF invoices with email / SMS delivery, paid and overdue tracking',
+        'Dashboard of billed, outstanding, overdue and collected totals',
+        'Ships as a Flask app, Windows desktop app and single offline HTML file'
+      ],
+      problem: 'Landlords split utility bills by estimate, which caused disputes and left arrears untracked.',
+      role: 'Sole developer — billing engine, invoicing, notifications and packaging.',
+      outcome: 'Every tenant gets an itemised, tier-accurate invoice and the landlord sees exactly who owes what.',
+      demo: '',
+      repo: ''
+    },
+    {
+      id: 'ecommerce',
+      title: 'Lizzie Collections — Online Store',
+      tags: ['web', 'fintech'],
+      platforms: ['Web'],
+      emoji: '🛍️',
+      image: UNSPLASH('1441986300917-64674bd600d8'),
+      imageAlt: 'Clothing boutique with shelves and racks',
+      blurb: 'Full storefront for a fashion boutique — catalogue, search, cart, wishlist, coupons, M-Pesa checkout, customer accounts and an admin control centre.',
+      stack: ['HTML', 'CSS', 'JavaScript', 'localStorage'],
+      features: [
+        'Filterable catalogue with product quick-view, recently viewed and recommendations',
+        'Persistent cart and wishlist with coupon codes',
+        'Checkout flow with M-Pesa and order confirmation',
+        'Customer account dashboard with order history',
+        'Admin centre to add, edit and remove products'
+      ],
+      problem: 'The boutique sold only through WhatsApp photos, with no catalogue, prices or order record.',
+      role: 'Design and full front-end build.',
+      outcome: 'A complete shop experience in the browser that the owner can manage without touching code.',
+      demo: '',
+      repo: ''
+    },
+    {
+      id: 'portal',
+      title: 'Kageraini TTI — Student Portal',
+      tags: ['web'],
+      platforms: ['Web'],
+      emoji: '🎓',
+      image: UNSPLASH('1541339907198-e08756dedf3f'),
+      imageAlt: 'Graduates throwing their caps in the air',
+      blurb: 'Public website and private portal for a technical training institute: trainee records, unit registration, fees, attendance, results, attachment and hostel booking.',
+      stack: ['JavaScript', 'Chart.js', 'Node.js', 'Express', 'CSS'],
+      features: [
+        'Public marketing site with programmes, events and news',
+        'Role-based sign-in routing staff and trainees to separate portals',
+        'Staff console: dashboard, trainees, fees, attendance and reports',
+        'Trainee self-service: fees, results, units, timetable and exam card',
+        'Shared design system with theme-aware charts'
+      ],
+      problem: 'Fee balances, results and registration lived in separate office files, so every trainee query meant a queue at the office.',
+      role: 'Sole developer — design system, public site and both portals.',
+      outcome: 'Trainees check fees and results themselves, and staff manage the institution from one console.',
+      demo: '',
+      repo: ''
+    },
+    {
+      id: 'sports',
+      title: 'FreeStream Hub — Live Sports & TV',
+      tags: ['web', 'media'],
+      platforms: ['Web', 'Cloudflare'],
+      emoji: '⚽',
+      image: UNSPLASH('1574629810360-7efbbe195018'),
+      imageAlt: 'Football on a pitch at a player’s feet',
+      blurb: 'Free and legal live sports fixtures, Kenyan and world TV channels and public films in one place, backed by a server that keeps every API key private.',
+      stack: ['Node.js', 'Cloudflare Workers', 'TheSportsDB', 'TMDB'],
+      features: [
+        'Live and upcoming fixtures browsable by league',
+        'Kenyan TV, news and favourite channels with continue-watching',
+        'Free HD films with subtitles',
+        'Admin page to manage API keys, stored AES-256-GCM encrypted',
+        'Zero-dependency Node server, deployable to Cloudflare Workers'
+      ],
+      problem: 'Finding a legal stream or even a fixture time meant hopping between ad-heavy sites.',
+      role: 'Sole developer — server, key vault, data proxy and front end.',
+      outcome: 'One clean hub for sports, TV and films where no key or secret ever reaches the browser.',
+      demo: '',
+      repo: ''
+    },
     {
       id: 'movixa',
       title: 'MOVIXA — Movie Discovery Hub',
-      tag: 'web',
+      tags: ['web', 'media'],
+      platforms: ['Web'],
       emoji: '🎬',
-      image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=70',
+      image: UNSPLASH('1489599849927-2ee91cede3ba'),
       imageAlt: 'Cinema seats facing a lit screen',
       blurb: 'Film discovery app with trending and top-rated rails, trailer playback, cast and crew pages, a saved watchlist and free public-domain features streamed from the Internet Archive.',
       stack: ['JavaScript', 'TMDB API', 'Internet Archive', 'CSS'],
+      features: [
+        'Trending, top-rated and genre rails with instant search',
+        'Trailer playback and cast & crew pages',
+        'Watch-provider links showing where a film is streaming',
+        'Watchlist persisted between visits',
+        'Public-domain films playable in place'
+      ],
       problem: 'Deciding what to watch means bouncing between listing sites, trailer searches and whichever service actually carries the film.',
       role: 'Sole developer — API layer, UI, and the watchlist and playback logic.',
       outcome: 'One page covers browsing, search, trailers, watch-provider links and a persisted watchlist, with public-domain titles playable in place.',
@@ -140,102 +352,83 @@
       repo: 'https://github.com/JeffBoss315/moviehub'
     },
     {
-      id: 'hospital',
-      title: 'Hospital Management System',
-      tag: 'software',
-      emoji: '🏥',
-      image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=70',
-      imageAlt: 'Hospital corridor',
-      blurb: 'Desktop system for patient records, appointments and billing, built for a clinic front desk with no prior digital records.',
-      stack: ['Python', 'Tkinter', 'SQLite'],
-      problem: 'Patient files were kept on paper, so retrieving a history took minutes and records were regularly mislaid.',
-      role: 'Sole developer — schema design, UI, and the reporting layer.',
-      outcome: 'Record lookup dropped from minutes to seconds, with appointment and billing history stored against each patient.',
-      demo: '',
-      repo: ''
+      id: 'weather',
+      title: 'WeatherX — Photographic Forecast',
+      tags: ['web'],
+      platforms: ['Web', 'Cloudflare'],
+      emoji: '🌦️',
+      image: UNSPLASH('1501630834273-4b5604d2ee31'),
+      imageAlt: 'Clouds gathering in a bright sky',
+      blurb: 'Weather told through photographs: live conditions, air quality, an hourly trend and a five-day filmstrip, with an interface accent that follows the sky.',
+      stack: ['JavaScript', 'OpenWeather API', 'Cloudflare Workers', 'CSS'],
+      features: [
+        'Day and night photo for each condition drives the hero and 5-day filmstrip',
+        'City autocomplete with full keyboard navigation',
+        'Air quality, sun arc, wind compass and a 24-hour temperature trend',
+        'Instant °C / °F switching with no extra API calls',
+        'API key hidden behind a Cloudflare Worker proxy; shareable ?city= links'
+      ],
+      problem: 'Most weather apps are a wall of icons and numbers; the forecast is hard to feel at a glance.',
+      role: 'Sole developer — design, front end and the Worker proxy.',
+      outcome: 'A forecast you read in a second, with the API key never exposed to visitors.',
+      demo: 'https://jeffboss315.github.io/WeatherX/',
+      repo: 'https://github.com/JeffBoss315/WeatherX'
     },
     {
-      id: 'diagnosis',
-      title: 'Disease Diagnosis Expert System',
-      tag: 'ai',
-      emoji: '🩺',
-      image: 'https://images.unsplash.com/photo-1584982751601-97dcc096659c?auto=format&fit=crop&w=800&q=70',
+      id: 'hospital',
+      title: 'Hospital Diagnosis Expert System',
+      tags: ['ai', 'desktop'],
+      platforms: ['Windows'],
+      emoji: '🏥',
+      image: UNSPLASH('1584982751601-97dcc096659c'),
       imageAlt: 'Doctor holding a stethoscope',
-      blurb: 'Rule-based expert system that narrows a likely diagnosis from reported symptoms and explains the reasoning behind each result.',
-      stack: ['Python', 'Expert System', 'Rule Engine'],
-      problem: 'Rural clinics have limited access to diagnostic specialists for a first-pass triage.',
-      role: 'Designed the rule base and the forward-chaining inference engine.',
-      outcome: 'Returns a ranked shortlist with the rules that fired, so the output can be checked rather than blindly trusted.',
+      blurb: 'Desktop clinical decision-support tool: capture symptoms, get a ranked differential with confidence scores, keep patient records and export reports.',
+      stack: ['Python', 'Tkinter', 'SQLite', 'scikit-learn', 'ReportLab'],
+      features: [
+        'Symptom matcher covering 48 conditions, with fuzzy matching of everyday phrases',
+        'Optional machine-learning model path, chosen automatically when trained',
+        'Ranked differential with confidence meters and a live probability chart',
+        'Patient directory with per-patient diagnosis history',
+        'One-click PDF reports, Excel / CSV export, user roles and a sign-in audit trail'
+      ],
+      problem: 'Rural clinics have limited access to specialists for first-pass triage, and patient files were kept on paper.',
+      role: 'Sole developer — inference engine, database, Tkinter UI and the packaged Windows build.',
+      outcome: 'A single offline .exe that returns an explainable shortlist in seconds and keeps each patient’s history on record.',
       demo: '',
       repo: ''
     },
     {
       id: 'agriculture',
-      title: 'Smart Agriculture System',
-      tag: 'ai',
+      title: 'Smart Agriculture Dashboard',
+      tags: ['ai', 'web'],
+      platforms: ['Web', 'Windows'],
       emoji: '🌱',
-      image: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&w=800&q=70',
+      image: UNSPLASH('1560493676-04071c5f467b'),
       imageAlt: 'Farmland crop rows',
-      blurb: 'Advises smallholder farmers on crop selection and irrigation timing from soil and weather inputs.',
-      stack: ['Python', 'Machine Learning', 'Data Analysis'],
-      problem: 'Planting decisions were made on habit rather than current soil and rainfall conditions.',
-      role: 'Data pipeline, model training, and the recommendation interface.',
-      outcome: 'Produces a per-season planting and watering recommendation from local conditions.',
-      demo: '',
-      repo: ''
-    },
-    {
-      id: 'logistics',
-      title: 'HeavyLine Logistics VTC',
-      tag: 'web',
-      emoji: '🚚',
-      image: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=70',
-      imageAlt: 'Haulage truck on the road',
-      blurb: 'Public site for a virtual trucking company — driver roster, event calendar and application flow for an active member community.',
-      stack: ['HTML', 'CSS', 'JavaScript'],
-      problem: 'The community coordinated entirely through chat, so new drivers had nowhere to find rules, events or how to join.',
-      role: 'Design and front-end build.',
-      outcome: 'A single public home for recruitment and events, replacing scattered chat messages.',
-      demo: '',
-      repo: ''
-    },
-    {
-      id: 'weather',
-      title: 'Weather Forecast App',
-      tag: 'web',
-      emoji: '🌦',
-      image: 'https://images.unsplash.com/photo-1501630834273-4b5604d2ee31?auto=format&fit=crop&w=800&q=70',
-      imageAlt: 'Clouds gathering in a bright sky',
-      blurb: 'Live forecast app with city search, current conditions and a multi-day outlook, consuming the OpenWeather API.',
-      stack: ['JavaScript', 'REST API', 'CSS'],
-      problem: 'A build to practise consuming a third-party API and handling real-world loading and error states.',
-      role: 'Sole developer.',
-      outcome: 'Handles network failure, empty search and unknown-city responses without breaking the interface.',
-      demo: '',
-      repo: ''
-    },
-    {
-      id: 'school',
-      title: 'School Management System',
-      tag: 'software',
-      emoji: '🏫',
-      image: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=800&q=70',
-      imageAlt: 'Empty school classroom',
-      blurb: 'Desktop application covering student enrolment, class assignment, grade entry and printable report cards.',
-      stack: ['Java', 'MySQL'],
-      problem: 'Termly report cards were compiled by hand across several spreadsheets.',
-      role: 'Sole developer — database design and application build.',
-      outcome: 'Report card generation moved from a multi-day manual job to a single print action.',
+      blurb: 'Smart-farming dashboard with live field telemetry, crop tracking, soil and nutrient panels, irrigation scheduling and photo-based crop disease screening.',
+      stack: ['Python', 'Flask', 'Pillow', 'ReportLab'],
+      features: [
+        'Field telemetry panels and charts from a custom SVG chart renderer',
+        'Soil, nutrient and weather panels with irrigation scheduling',
+        'Photo-based disease screening with a confidence score',
+        'Exportable PDF and CSV reports',
+        'Runs fully offline — no CDN — and ships as a bundled executable'
+      ],
+      problem: 'Planting and watering decisions were made on habit rather than current soil and weather conditions.',
+      role: 'Sole developer — Flask app, telemetry model, image screener and reports.',
+      outcome: 'Farm conditions, schedules and crop health in one dashboard that works without internet.',
       demo: '',
       repo: ''
     }
   ];
 
   var FILTERS = [
-    { key: 'all', label: 'All' },
-    { key: 'web', label: 'Web' },
-    { key: 'software', label: 'Software' },
-    { key: 'ai', label: 'AI' }
+    { key: 'all',     label: 'All' },
+    { key: 'web',     label: 'Web apps' },
+    { key: 'fintech', label: 'Fintech & business' },
+    { key: 'desktop', label: 'Desktop' },
+    { key: 'ai',      label: 'AI & data' },
+    { key: 'media',   label: 'Media & gaming' }
   ];
 
   var ACCENTS = [
@@ -684,13 +877,20 @@
   function coverMarkup(p) {
     /* With no image the gradient background on .project-cover shows
        through, so the emoji is the fallback rather than a blank box. */
+    var extras =
+      (p.featured ? '<span class="cover-ribbon">Featured</span>' : '') +
+      (p.platforms && p.platforms.length
+        ? '<span class="cover-platforms">' + p.platforms.map(esc).join(' · ') + '</span>'
+        : '');
     if (!p.image) {
-      return '<span class="cover-emoji" aria-hidden="true">' + esc(p.emoji) + '</span>';
+      return '<span class="cover-emoji" aria-hidden="true">' + esc(p.emoji) + '</span>' + extras;
     }
     return '<img src="' + esc(p.image) + '" alt="' + esc(p.imageAlt || p.title) +
       '" loading="lazy" decoding="async" width="800" height="450">' +
-      '<span class="cover-badge" aria-hidden="true">' + esc(p.emoji) + '</span>';
+      '<span class="cover-badge" aria-hidden="true">' + esc(p.emoji) + '</span>' + extras;
   }
+
+  function tagsOf(p) { return p.tags || (p.tag ? [p.tag] : []); }
 
   function stackMarkup(p) {
     return p.stack.map(function (s) { return '<span>' + esc(s) + '</span>'; }).join('');
@@ -701,11 +901,6 @@
     if (p.demo) {
       out += '<a href="' + esc(p.demo) + '" target="_blank" rel="noopener noreferrer">' +
         icon('external') + 'Live Demo<span class="sr-only"> for ' + esc(p.title) +
-        ' (opens in a new tab)</span></a>';
-    }
-    if (p.repo) {
-      out += '<a href="' + esc(p.repo) + '" target="_blank" rel="noopener noreferrer">' +
-        icon('github') + 'Code<span class="sr-only"> for ' + esc(p.title) +
         ' (opens in a new tab)</span></a>';
     }
     return out;
@@ -722,9 +917,11 @@
        The cover tint lives in CSS and keys off --i, so it follows the
        accent picker instead of being frozen at render time. */
     grid.innerHTML = PROJECTS.map(function (p, i) {
-      var haystack = (p.title + ' ' + p.blurb + ' ' + p.stack.join(' ')).toLowerCase();
+      var haystack = (p.title + ' ' + p.blurb + ' ' + p.stack.join(' ') + ' ' +
+        (p.platforms || []).join(' ') + ' ' + (p.features || []).join(' ')).toLowerCase();
       return '' +
-        '<article class="project reveal" data-tag="' + esc(p.tag) + '" data-id="' + esc(p.id) +
+        '<article class="project reveal' + (p.featured ? ' is-featured' : '') +
+          '" data-tags="' + esc(tagsOf(p).join(' ')) + '" data-id="' + esc(p.id) +
           '" style="--i:' + i + '" data-search="' + esc(haystack) + '">' +
           '<div class="project-cover">' + coverMarkup(p) + '</div>' +
           '<div class="project-body">' +
@@ -756,7 +953,8 @@
       var shown = 0;
 
       cards.forEach(function (card) {
-        var byTag = activeFilter === 'all' || card.dataset.tag === activeFilter;
+        var byTag = activeFilter === 'all' ||
+          (' ' + card.dataset.tags + ' ').indexOf(' ' + activeFilter + ' ') !== -1;
         var byText = !q || card.dataset.search.indexOf(q) !== -1;
         var match = byTag && byText;
         var was = !card.classList.contains('is-hidden');
@@ -793,9 +991,17 @@
 
     /* --- filters --- */
     if (filterBar) {
-      filterBar.innerHTML = FILTERS.map(function (f, i) {
+      /* Each chip carries its own count, so the visitor can see the
+         shape of the work before clicking anything. Categories with no
+         projects are dropped rather than offered as a dead end. */
+      filterBar.innerHTML = FILTERS.map(function (f) {
+        var n = f.key === 'all' ? PROJECTS.length : PROJECTS.filter(function (p) {
+          return tagsOf(p).indexOf(f.key) !== -1;
+        }).length;
+        if (!n) return '';
         return '<button type="button" class="filter" data-filter="' + f.key +
-          '" aria-pressed="' + (i === 0) + '">' + f.label + '</button>';
+          '" aria-pressed="' + (f.key === 'all') + '">' + esc(f.label) +
+          '<span class="filter-count" aria-hidden="true">' + n + '</span></button>';
       }).join('');
 
       filterBar.addEventListener('click', function (e) {
@@ -816,7 +1022,7 @@
         if (e.key === 'Escape') { search.value = ''; applyFilters(); search.blur(); }
       });
       document.addEventListener('keydown', function (e) {
-        if (e.key === '/' && !isTyping()) {
+        if (e.key === '/' && !isTyping() && !overlayOpen()) {
           e.preventDefault();
           search.focus();
         }
@@ -832,26 +1038,81 @@
     var body = $('#modal-body');
     var lastFocused = null;
 
-    function openModal(id) {
+    var currentId = null;
+
+    /* Prev / next walk the cards the visitor can currently see, so
+       paging inside "Fintech" stays inside Fintech. A project opened
+       from the command palette can be one the active filter hides; then
+       the walk covers every project, or the counter would read "0 / 2"
+       and paging would start from nowhere. */
+    function visibleIds() {
+      var ids = cards
+        .filter(function (c) { return !c.classList.contains('is-hidden'); })
+        .map(function (c) { return c.dataset.id; });
+      if (currentId && ids.indexOf(currentId) === -1) {
+        ids = PROJECTS.map(function (p) { return p.id; });
+      }
+      return ids;
+    }
+
+    function step(dir) {
+      var ids = visibleIds();
+      if (ids.length < 2) return;
+      var at = ids.indexOf(currentId);
+      renderModal(ids[(at + dir + ids.length) % ids.length]);
+    }
+
+    function renderModal(id) {
       var p = PROJECTS.filter(function (x) { return x.id === id; })[0];
-      if (!p) return;
-      lastFocused = document.activeElement;
+      if (!p) return false;
+      currentId = id;
+
+      var ids = visibleIds();
+      var at = ids.indexOf(id);
+      var labels = {};
+      FILTERS.forEach(function (f) { labels[f.key] = f.label; });
 
       body.innerHTML =
+        (p.image
+          ? '<div class="modal-cover"><img src="' + esc(p.image) + '" alt="' + esc(p.imageAlt || p.title) +
+            '" width="800" height="450"><span class="cover-badge" aria-hidden="true">' + esc(p.emoji) + '</span></div>'
+          : '') +
+        '<div class="modal-meta">' +
+          tagsOf(p).map(function (t) { return '<span>' + esc(labels[t] || t) + '</span>'; }).join('') +
+          (p.platforms || []).map(function (t) { return '<span class="is-platform">' + esc(t) + '</span>'; }).join('') +
+        '</div>' +
         '<h3 id="modal-title">' + esc(p.title) + '</h3>' +
+        '<p class="modal-blurb">' + esc(p.blurb) + '</p>' +
         '<div class="stack">' + stackMarkup(p) + '</div>' +
+        (p.features && p.features.length
+          ? '<h4 class="modal-sub">Key features</h4><ul class="feature-list">' +
+              p.features.map(function (f) { return '<li>' + icon('check') + '<span>' + esc(f) + '</span></li>'; }).join('') +
+            '</ul>'
+          : '') +
         '<dl>' +
           '<div><dt>The problem</dt><dd>' + esc(p.problem) + '</dd></div>' +
           '<div><dt>My role</dt><dd>' + esc(p.role) + '</dd></div>' +
           '<div><dt>Outcome</dt><dd>' + esc(p.outcome) + '</dd></div>' +
         '</dl>' +
-        (p.demo || p.repo
-          ? '<div class="modal-actions">' +
-              (p.demo ? '<a class="btn btn-sm" data-ripple href="' + esc(p.demo) + '" target="_blank" rel="noopener noreferrer">View Live</a>' : '') +
-              (p.repo ? '<a class="btn-outline btn-sm" data-ripple href="' + esc(p.repo) + '" target="_blank" rel="noopener noreferrer">View Code</a>' : '') +
-            '</div>'
+        '<div class="modal-actions">' +
+          (p.demo ? '<a class="btn btn-sm" data-ripple href="' + esc(p.demo) + '" target="_blank" rel="noopener noreferrer">' + icon('external') + 'View Live</a>' : '') +
+          '<a class="btn btn-sm" data-ripple href="#contact" data-close-modal>' + icon('message') + 'Ask me for a demo</a>' +
+        '</div>' +
+        (ids.length > 1
+          ? '<nav class="modal-nav" aria-label="Other projects">' +
+              '<button type="button" data-step="-1">' + icon('arrow-right') + 'Previous</button>' +
+              '<span>' + (at + 1) + ' / ' + ids.length + '</span>' +
+              '<button type="button" data-step="1">Next' + icon('arrow-right') + '</button>' +
+            '</nav>'
           : '');
 
+      panel.scrollTop = 0;
+      return true;
+    }
+
+    function openModal(id) {
+      if (!renderModal(id)) return;
+      lastFocused = document.activeElement;
       modal.classList.add('is-open');
       modal.removeAttribute('aria-hidden');
       document.body.style.overflow = 'hidden';
@@ -867,18 +1128,38 @@
       modal.setAttribute('aria-hidden', 'true');
     }
 
+    /* The whole card opens the story, not just the small Details link —
+       except when the click was on a real link inside it. */
     grid.addEventListener('click', function (e) {
-      var btn = e.target.closest('.details-btn');
-      if (btn) openModal(btn.dataset.id);
+      if (e.target.closest('a')) return;
+      var card = e.target.closest('.project');
+      if (card) openModal(card.dataset.id);
     });
 
     modal.addEventListener('click', function (e) {
-      if (e.target === modal || e.target.closest('.modal-close')) closeModal();
+      if (e.target === modal || e.target.closest('.modal-close')) { closeModal(); return; }
+      var stepBtn = e.target.closest('[data-step]');
+      if (stepBtn) {
+        step(+stepBtn.dataset.step);
+        var again = $('[data-step="' + stepBtn.dataset.step + '"]', modal);
+        /* Keep the new project's cover in view rather than letting
+           focus drag the panel down to the button. */
+        if (again) again.focus({ preventScroll: true });
+        return;
+      }
+      if (e.target.closest('[data-close-modal]')) closeModal();
     });
 
     document.addEventListener('keydown', function (e) {
       if (!modal.classList.contains('is-open')) return;
+      /* The palette can be opened on top of the modal; its keys are its own. */
+      if (document.querySelector('.palette.is-open')) return;
       if (e.key === 'Escape') { closeModal(); return; }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        step(e.key === 'ArrowRight' ? 1 : -1);
+        return;
+      }
       if (e.key !== 'Tab') return;
 
       /* Keep tab focus inside the dialog while it is open. */
@@ -1085,7 +1366,8 @@
     function tick() {
       var now;
       try {
-        /* Africa/Nairobi is UTC+3 and observes no DST. */
+        /* Africa/Nairobi is the IANA zone for all of Kenya (Thika
+           included): UTC+3, no DST. */
         now = new Intl.DateTimeFormat('en-GB', {
           hour: '2-digit', minute: '2-digit', hour12: true,
           timeZone: 'Africa/Nairobi'
@@ -1287,14 +1569,29 @@
     if (!host) return;
 
     var domains = {};
-    PROJECTS.forEach(function (p) { domains[p.tag] = true; });
+    PROJECTS.forEach(function (p) {
+      tagsOf(p).forEach(function (t) { domains[t] = true; });
+    });
 
+    /* Prose elsewhere on the page that quotes the project count. */
+    $$('[data-project-count]').forEach(function (el) { el.textContent = PROJECTS.length; });
+
+    /* One key per tool, however it is spelled: the skills list says
+       "HTML5" and "MikroTik RouterOS" where a project says "HTML" and
+       "MikroTik", and counting both would inflate the figure. */
+    function toolKey(name) {
+      return name.toLowerCase()
+        .replace(/\(.*?\)/g, '')
+        .replace(/\b(api|routeros|basics)\b/g, '')
+        .replace(/[^a-z0-9+#]/g, '')
+        .replace(/(html|css)\d+$/, '$1');
+    }
     var stack = {};
     PROJECTS.forEach(function (p) {
-      p.stack.forEach(function (s) { stack[s.toLowerCase()] = true; });
+      p.stack.forEach(function (s) { stack[toolKey(s)] = true; });
     });
     $$('#skills .tag').forEach(function (t) {
-      stack[t.textContent.trim().toLowerCase()] = true;
+      stack[toolKey(t.textContent.trim())] = true;
     });
 
     var STATS = [
@@ -1401,6 +1698,18 @@
         hint: p.stack.join(' · '),
         keywords: p.stack.join(' ') + ' ' + p.blurb,
         run: function () {
+          /* If the active filter or search hides this card, clear them so
+             the visitor lands on a grid that actually contains it. */
+          var card = document.querySelector('.project[data-id="' + p.id + '"]');
+          if (card && card.classList.contains('is-hidden')) {
+            var all = document.querySelector('.filter[data-filter="all"]');
+            var search = document.getElementById('project-search');
+            if (search && search.value) {
+              search.value = '';
+              search.dispatchEvent(new Event('input'));
+            }
+            if (all) all.click();
+          }
           go('#projects')();
           /* Let the scroll start before the dialog takes focus back. */
           setTimeout(function () {

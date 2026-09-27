@@ -3,7 +3,7 @@
 Personal portfolio site for **Geoffrey Njuguna (Jeff)** — Computer Science graduate and
 web/software developer based in Kenya.
 
-Live: https://jeffboss315.github.io/myportfolio/
+Live: <https://jeffboss315.github.io/myportfolio/>
 
 ## Stack
 
@@ -40,8 +40,18 @@ them.
 
 ## Editing content
 
-Projects live in the `PROJECTS` array at the top of `script.js`. Leave `demo` or `repo`
-as `''` and that link simply does not render.
+Projects live in the `PROJECTS` array at the top of `script.js`. Leave `demo` as `''`
+and no "Live Demo" link renders. Every project modal offers "Ask me for a demo".
+`repo` is kept for reference only — source-code links are not shown on the site.
+
+- `tags` — one or more filter keys from `FILTERS` (`web`, `fintech`, `desktop`, `ai`,
+  `media`). Filter chips show live counts and hide when empty.
+- `platforms` — shown on the card cover and in the modal (`Web`, `Windows`, `Android`…).
+- `features` — bullet list in the detail modal.
+- `featured: true` — adds a "Featured" ribbon.
+
+The hero stats and the "N of those builds" line in the Journey section are counted
+from this array, so they never go stale.
 
 To receive contact-form messages by email, set `FORM_ENDPOINT` in `script.js` to a
 Formspree (or Web3Forms) URL. While it is empty the form validates and then opens the

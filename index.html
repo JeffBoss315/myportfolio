@@ -17,14 +17,22 @@
         content="Computer Science graduate building web applications, desktop software and AI systems.">
   <meta property="og:image" content="https://jeffboss315.github.io/myportfolio/boss.jpg">
   <meta property="og:url" content="https://jeffboss315.github.io/myportfolio/">
+  <meta property="og:site_name" content="Geoffrey Njuguna">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Geoffrey Njuguna — Web &amp; Software Developer">
+  <meta name="twitter:description"
+        content="Computer Science graduate building web applications, desktop software and AI systems.">
+  <meta name="twitter:image" content="https://jeffboss315.github.io/myportfolio/boss.jpg">
+  <link rel="canonical" href="https://jeffboss315.github.io/myportfolio/">
 
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23080b14'/><text y='72' x='50' text-anchor='middle' font-size='62' font-family='Segoe UI,sans-serif' font-weight='bold' fill='%2300d4ff'>J</text></svg>">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+  <!-- No crossorigin: the images are fetched without CORS, and a CORS
+       preconnect lands in a separate pool they would never reuse. -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://images.unsplash.com">
   <!-- The hero photo is the largest thing painted and it is cross-origin,
        so the connection alone is not enough — start the fetch during head
        parsing rather than when the <img> is reached. -->
@@ -47,7 +55,8 @@
     "description": "Computer Science graduate building web applications, desktop software and AI systems.",
     "email": "mailto:jeffboss730@gmail.com",
     "telephone": "+254707739557",
-    "image": "boss.jpg",
+    "image": "https://jeffboss315.github.io/myportfolio/boss.jpg",
+    "url": "https://jeffboss315.github.io/myportfolio/",
     "address": { "@type": "PostalAddress", "addressCountry": "KE" },
     "alumniOf": { "@type": "EducationalOrganization", "name": "Thika Technical Training Institute" },
     "knowsAbout": ["Web Development", "Software Development", "Artificial Intelligence",
@@ -94,12 +103,7 @@
        Use one with:  <svg class="icon"><use href="#i-mail"></use></svg>
        ===================================================================== -->
   <svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <!-- UI icons: 24x24, stroked, inherit currentColor -->
-      <g id="stroke-defaults" fill="none" stroke="currentColor" stroke-width="2"
-         stroke-linecap="round" stroke-linejoin="round"></g>
-    </defs>
-
+    <!-- UI icons: 24x24, stroked, inherit currentColor -->
     <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
     </symbol>
@@ -305,7 +309,7 @@
         <p class="hero-greet"><span id="greeting">Hello</span>, I'm</p>
         <h1>Geoffrey <span>Njuguna</span></h1>
 
-        <p class="hero-role">
+        <p class="hero-role" aria-hidden="true">
           <span id="typing">Web Developer</span><span class="cursor" aria-hidden="true"></span>
         </p>
         <p class="sr-only">Computer Scientist, Web Developer, Software Developer, AI Developer,
@@ -355,7 +359,7 @@
 
         <p class="hero-local">
           <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>
-          It's <time id="local-clock">—</time> where I am in Nairobi
+          It's <time id="local-clock">—</time> where I am in Thika
         </p>
       </div>
 
@@ -442,6 +446,7 @@
               <li>Hospital &amp; clinic systems</li>
               <li>School management systems</li>
               <li>Point of sale (POS)</li>
+              <li>SACCO, billing &amp; M-Pesa systems</li>
               <li>Custom internal tools</li>
             </ul>
           </div>
@@ -542,8 +547,14 @@
       <div class="skill-group reveal">
         <h3>Frameworks &amp; Libraries</h3>
         <div class="tags">
+          <span class="tag"><img class="tag-img tag-img--dark" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/flask/flask-original.svg" alt="" width="22" height="22" loading="lazy">Flask</span>
+          <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg" alt="" width="22" height="22" loading="lazy">Node.js</span>
+          <span class="tag"><img class="tag-img tag-img--dark" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/express/express-original.svg" alt="" width="22" height="22" loading="lazy">Express</span>
+          <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/electron/electron-original.svg" alt="" width="22" height="22" loading="lazy">Electron</span>
+          <span class="tag"><img class="tag-img tag-img--dark" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/sqlalchemy/sqlalchemy-original.svg" alt="" width="22" height="22" loading="lazy">SQLAlchemy</span>
+          <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/chartjs/chartjs-original.svg" alt="" width="22" height="22" loading="lazy">Chart.js</span>
           <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/bootstrap/bootstrap-original.svg" alt="" width="22" height="22" loading="lazy">Bootstrap</span>
-          <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/pandas/pandas-original.svg" alt="" width="22" height="22" loading="lazy">Pandas</span>
+          <span class="tag"><img class="tag-img tag-img--dark" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/pandas/pandas-original.svg" alt="" width="22" height="22" loading="lazy">Pandas</span>
           <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/numpy/numpy-original.svg" alt="" width="22" height="22" loading="lazy">NumPy</span>
           <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/scikitlearn/scikitlearn-original.svg" alt="" width="22" height="22" loading="lazy">scikit-learn</span>
           <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-window"></use></svg>Tkinter</span>
@@ -554,8 +565,10 @@
       <div class="skill-group reveal">
         <h3>Databases &amp; Tools</h3>
         <div class="tags">
-          <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg" alt="" width="22" height="22" loading="lazy">MySQL</span>
+          <span class="tag"><img class="tag-img tag-img--dark" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg" alt="" width="22" height="22" loading="lazy">MySQL</span>
           <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/sqlite/sqlite-original.svg" alt="" width="22" height="22" loading="lazy">SQLite</span>
+          <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/supabase/supabase-original.svg" alt="" width="22" height="22" loading="lazy">Supabase</span>
+          <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cloudflare/cloudflare-original.svg" alt="" width="22" height="22" loading="lazy">Cloudflare Workers</span>
           <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg" alt="" width="22" height="22" loading="lazy">Git</span>
           <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-github"></use></svg>GitHub</span>
           <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vscode/vscode-original.svg" alt="" width="22" height="22" loading="lazy">VS Code</span>
@@ -566,12 +579,15 @@
       </div>
 
       <div class="skill-group reveal">
-        <h3>Systems &amp; Networking</h3>
+        <h3>Systems, Networking &amp; Integrations</h3>
         <div class="tags">
           <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/windows11/windows11-original.svg" alt="" width="22" height="22" loading="lazy">Windows</span>
           <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-terminal"></use></svg>Linux Basics</span>
           <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-network"></use></svg>Networking</span>
           <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-wrench"></use></svg>Hardware Repair</span>
+          <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-phone"></use></svg>M-Pesa Daraja API</span>
+          <span class="tag"><svg class="icon" aria-hidden="true"><use href="#i-network"></use></svg>MikroTik RouterOS</span>
+          <span class="tag"><img class="tag-img" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/android/android-original.svg" alt="" width="22" height="22" loading="lazy">Android (Capacitor)</span>
         </div>
       </div>
     </section>
@@ -592,7 +608,8 @@
           <p>
             Building websites, desktop systems and AI tools for businesses, schools and
             clinics — usually replacing a paper or spreadsheet process rather than an
-            existing piece of software. Seven of those builds are in the projects section below.
+            existing piece of software. <span data-project-count>12</span> of those builds —
+            from M-Pesa billing systems to a real-time fleet platform — are in the projects section below.
           </p>
           <div class="tags">
             <span class="tag">Client discovery</span>
